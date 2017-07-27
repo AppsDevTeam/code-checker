@@ -232,6 +232,70 @@ class Tasks
 	}
 
 
+	public static function forgottenDebugFixer(&$contents, Result $result)
+	{
+
+		/*
+		foreach (token_get_all($contents) as $token) {
+			if (is_array($token)) {
+				echo token_name($token[0])."\n";
+			}
+		}
+		print_r(token_get_all($contents));
+		/**/
+
+		$out = '';
+		$depth = 0;
+		$ignoreContent = FALSE;
+		$tokens = token_get_all($contents);
+
+		for ($i = 0; $i < count($tokens); $i++) {
+			$token = $tokens[$i];
+			if ($ignoreContent && $token === '(') {
+				$depth++;
+
+			} elseif ($ignoreContent && $token === ')') {
+				$depth--;
+				if ($depth === 0) {
+					$ignoreContent = FALSE;
+				}
+
+				$a = $i + 1;
+				if (isset($tokens[$a]) && $tokens[$a] === ';') {
+					// Odstraníme případný středník
+					$i = $a;
+				}
+
+				$a = $i + 1;
+				if (isset($tokens[$a][0]) && $tokens[$a][0] === T_WHITESPACE) {
+					// Odstraníme případný whitespace
+					$i = $a;
+				}
+
+				continue;   // Ignorujeme ')'
+
+			} elseif (is_array($token) && $token[0] === T_STRING && in_array($token[1], ['bd', 'dd', 'd'])) {
+				$a = $i + 1;
+				if (isset($tokens[$a]) && $tokens[$a][0] === T_WHITESPACE) {
+					$a++;
+				}
+				if (isset($tokens[$a]) && $tokens[$a] === '(') {
+					$ignoreContent = TRUE;
+
+					$result->error("forgotten debug '$token[1]'", $token[2]);
+				}
+			}
+
+			if ($ignoreContent) {
+				continue;
+			}
+
+			$out .= is_array($token) ? $token[1] : $token;
+		}
+		$contents = $out;
+	}
+
+
 	private static function offsetToLine($s, $offset)
 	{
 		return $offset ? substr_count($s, "\n", 0, $offset) + 1 : 1;
